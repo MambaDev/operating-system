@@ -187,6 +187,22 @@ impl fmt::Write for Writer {
     }
 }
 
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::std::vga_buffer::_print(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print(args: core::fmt::Arguments) {
+    use core::fmt::Write;
+    super::vga_buffer::WRITER.lock().write_fmt(args).unwrap();
+}
 
 // By introducing the writer as a global static, it begins to ensure that more problems occur. By
 // having a global static means that you cannot easily have mutual exclusion. And need to
@@ -202,3 +218,42 @@ lazy_static::lazy_static! {
    });
 }
 
+#[cfg(test)]
+#[macro_use]
+mod test {
+    #[cfg(test)]
+    use crate::{serial_print, serial_println};
+    use crate::std::vga_buffer::*;
+    use crate::println;
+
+    #[test_case]
+    fn test_println_single_line() {
+        serial_print!("test_println_single_line... ");
+        println!("test_println_single_line output");
+        serial_println!("[ok]");
+    }
+
+    #[test_case]
+    fn test_println_many_short() {
+        serial_print!("test_println_many_short... ");
+        for _ in 0..200 {
+            println!("test_println_many_short output");
+        }
+        serial_println!("[ok]");
+    }
+
+    #[test_case]
+    fn test_println_single_line_output() {
+        serial_print!("test_println_single_line_output... ");
+
+        let input = "Some test string that fits on a single line";
+        println!("{}", input);
+
+        for (i, c) in input.chars().enumerate() {
+            let screen_char = WRITER.lock().buffer.chars[TEXT_BUFFER_HEIGHT - 2][i].read();
+            assert_eq!(char::from(screen_char.ascii_character), c);
+        }
+
+        serial_println!("[ok]");
+    }
+}

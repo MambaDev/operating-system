@@ -10,7 +10,27 @@ edition = "2018"
 bootloader = "0.9.2"
 volatile = "0.2.6"
 spin = "0.5.2"
+x86_64 = "0.9.5"
+uart_16550 = "0.2.5"
 
 [dependencies.lazy_static]
 version = "1.0"
 features = ["spin_no_std"]
+
+# Right now we have an endless loop at the end of our _start function and need to close QEMU manually on each execution
+# of cargo xtest. This is unfortunate because we also want to run cargo xtest in scripts without user interaction. The
+# clean solution to this would be to implement a proper way to shutdown our OS. Unfortunately this is relatively complex,
+# because it requires implementing support for either the APM or ACPI power management standard.
+#
+# Luckily, there is an escape hatch: QEMU supports a special isa-debug-exit device, which provides an easy way to exit
+# QEMU from the guest system. To enable it, we need to pass a -device argument to QEMU. We can do so by adding a package.
+# metadata.bootimage.test-args configuration key in our Cargo.toml
+[package.metadata.bootimage]
+test-args = [ "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio", "-display", "none"]
+
+# The problem is that cargo test considers all error codes other than 0 as failure. But our success exist code for it is
+# 1 bit shifted << 1 to be 3. And thus will need to map this to the given out put value.
+test-success-exit-code = 33         # (0x10 << 1) | 1
+
+# Set the test timeout for 30 seconds compared to the deafult 5 minutes (300 seconds).
+test-timeout = 30          # (in seconds)
