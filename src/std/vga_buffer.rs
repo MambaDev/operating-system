@@ -81,7 +81,6 @@ impl Writer {
     /// # Example
     ///
     /// ```
-    /// let writer = Writer {}
     /// writer.write_string("Hello, World");
     /// ```
     pub fn write_string(&mut self, input_string: &str) {
@@ -103,7 +102,6 @@ impl Writer {
     /// # Example
     ///
     /// ```
-    /// let writer = Writer {}
     /// writer::write_byte(b'\n');
     /// ```
     pub fn write_byte(&mut self, byte: u8) {
@@ -135,7 +133,6 @@ impl Writer {
     /// # Example
     ///
     /// ```
-    /// let mut writer = Writer {...}
     /// writer.write_string("Hello, World\n");
     /// ```
     fn new_line(&mut self) {
@@ -156,7 +153,6 @@ impl Writer {
     /// # Example
     ///
     /// ```
-    /// let mut writer = Writer {...}
     /// writer.write_string("Hello, World\n");
     /// ```
     fn clear_row(&mut self, row: usize) {
@@ -239,6 +235,41 @@ mod test {
         for _ in 0..200 {
             println!("test_println_many_short output");
         }
+        serial_println!("[ok]");
+    }
+
+    #[test_case]
+    fn test_println_many_long() {
+        serial_print!("test_println_many_long... ");
+        for _ in 0..200 {
+            println!("test_println_many_long output test_println_many_long output \
+            test_println_many_long output test_println_many_long output test_println_many_long \
+            output test_println_many_long output");
+        }
+        serial_println!("[ok]");
+    }
+
+    #[test_case]
+    fn test_println_long_should_overflow() {
+        serial_print!("test_println_long_should_overflow... ");
+
+        let input = " Some test string that fits on a single  Some test string that fits on a single ";
+
+        print!("{}", input);
+        print!("{}", input);
+        print!("{}", input);
+        println!();
+
+        for i in 1..4 {
+            for (k, c) in input.chars().enumerate() {
+                // minus i for the given row position and then an additional minus 1 for the new
+                // line that would again shift all components up one row.
+                let screen_char = WRITER.lock().buffer.chars[TEXT_BUFFER_HEIGHT - i - 1][k].read();
+                assert_eq!(char::from(screen_char.ascii_character), c);
+            }
+        }
+
+
         serial_println!("[ok]");
     }
 

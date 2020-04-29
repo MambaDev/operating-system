@@ -3,6 +3,9 @@ use spin::Mutex;
 use lazy_static::lazy_static;
 use core::fmt::Arguments;
 
+// Globally accessible implementation of the first serial port of the virtual machine. This will
+// be used during testing to ensure that the tests can run headless and process the output to the
+// virtual machines terminal output. Using a spin lock to ensure mutual exclusion.
 lazy_static! {
     pub static ref SERIAL1: Mutex<SerialPort> = {
         let mut serial_port = unsafe { SerialPort::new(0x3F8) };
@@ -10,9 +13,6 @@ lazy_static! {
         Mutex::new(serial_port)
     };
 }
-
-
-
 
 /// Prints to the host through the serial interface.
 #[macro_export]
