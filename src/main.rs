@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(abi_x86_interrupt)]
 #![feature(asm)]
 #![feature(custom_test_frameworks)]
 #![test_runner(operating_system::test_runner)]
@@ -11,15 +12,22 @@ use core::panic::PanicInfo;
 
 
 /// This follows the implementation and guide of building a operating system in rust
-/// by: https://os.phil-opp.com
+/// by: https://os.phil-opp.com - current position: Double Faults
 // noinspection RsUnresolvedReference
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
+    operating_system::init(); // new
+
+    // invoke a breakpoint exception
+    x86_64::instructions::interrupts::int3(); // new
+
+    // as before
     #[cfg(test)]
         test_main();
 
+    println!("It did not crash!");
     loop {}
 }
 

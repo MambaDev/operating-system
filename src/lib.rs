@@ -1,11 +1,13 @@
 #![no_std]
 
+#![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
+use crate::std::interrupts;
 
 pub mod std;
 
@@ -15,6 +17,7 @@ pub mod std;
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    init();      // new
     test_main();
     loop {}
 }
@@ -62,5 +65,8 @@ fn panic(info: &PanicInfo) -> ! {
     test_panic_handler(info)
 }
 
+pub fn init() {
+    interrupts::init_idt();
+}
 
 
