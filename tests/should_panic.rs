@@ -13,13 +13,13 @@ pub extern "C" fn _start() -> ! {
 }
 
 fn should_fail() {
-    serial_print!("should_fail... ");
+    serial_print!("should_fail...");
     assert_eq!(0, 1);
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    serial_println!("[ok]");
+    serial_println!("\t[ok]");
     exit_qemu(QemuExitCode::Success);
     loop {}
 }

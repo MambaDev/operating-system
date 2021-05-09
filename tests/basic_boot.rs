@@ -19,9 +19,7 @@ pub extern "C" fn _start() -> ! {
 
 #[test_case]
 fn test_println() {
-    serial_print!("test_println... ");
     println!("test_println output");
-    serial_println!("[ok]");
 }
 
 #[panic_handler]

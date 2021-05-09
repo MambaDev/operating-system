@@ -218,41 +218,32 @@ lazy_static::lazy_static! {
 #[macro_use]
 mod test {
     #[cfg(test)]
-    use crate::{serial_print, serial_println};
     use crate::std::vga_buffer::*;
     use crate::println;
 
     #[test_case]
     fn test_println_single_line() {
-        serial_print!("test_println_single_line... ");
         println!("test_println_single_line output");
-        serial_println!("[ok]");
     }
 
     #[test_case]
     fn test_println_many_short() {
-        serial_print!("test_println_many_short... ");
         for _ in 0..200 {
             println!("test_println_many_short output");
         }
-        serial_println!("[ok]");
     }
 
     #[test_case]
     fn test_println_many_long() {
-        serial_print!("test_println_many_long... ");
         for _ in 0..200 {
             println!("test_println_many_long output test_println_many_long output \
             test_println_many_long output test_println_many_long output test_println_many_long \
             output test_println_many_long output");
         }
-        serial_println!("[ok]");
     }
 
     #[test_case]
     fn test_println_long_should_overflow() {
-        serial_print!("test_println_long_should_overflow... ");
-
         let input = " Some test string that fits on a single  Some test string that fits on a single ";
 
         print!("{}", input);
@@ -268,15 +259,10 @@ mod test {
                 assert_eq!(char::from(screen_char.ascii_character), c);
             }
         }
-
-
-        serial_println!("[ok]");
     }
 
     #[test_case]
     fn test_println_single_line_output() {
-        serial_print!("test_println_single_line_output... ");
-
         let input = "Some test string that fits on a single line";
         println!("{}", input);
 
@@ -284,7 +270,5 @@ mod test {
             let screen_char = WRITER.lock().buffer.chars[TEXT_BUFFER_HEIGHT - 2][i].read();
             assert_eq!(char::from(screen_char.ascii_character), c);
         }
-
-        serial_println!("[ok]");
     }
 }
