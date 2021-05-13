@@ -7,7 +7,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use operating_system::{println, serial_println, serial_print};
+use operating_system::{println};
 
 #[no_mangle] // don't mangle the name of this function
 // noinspection RsUnresolvedReference
