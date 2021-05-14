@@ -20,8 +20,6 @@ use core::panic::PanicInfo;
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
-    operating_system::init();
-
     // as before
     #[cfg(test)]
         test_main();

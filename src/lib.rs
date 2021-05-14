@@ -7,7 +7,6 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use crate::std::interrupts;
 
 pub mod std;
 
@@ -23,6 +22,7 @@ pub extern "C" fn _start() -> ! {
 }
 
 pub fn init() {
+    std::gdt::init();
     std::interrupts::init_idt();
 }
 
