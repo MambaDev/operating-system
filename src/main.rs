@@ -10,15 +10,14 @@ mod std;
 
 use core::panic::PanicInfo;
 
-// WILO: Creating a TSS
-// https://os.phil-opp.com/double-fault-exceptions/#creating-a-tss
-
 /// This follows the implementation and guide of building a operating system in rust
 /// by: https://os.phil-opp.com - current position: Double Faults
 // noinspection RsUnresolvedReference
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
+
+    operating_system::init();
 
     // as before
     #[cfg(test)]
