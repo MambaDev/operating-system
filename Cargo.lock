@@ -21,12 +21,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfe7a297d22859b1cb0b939cfa0b01288d77804c8544acefd2c1135135587f7d"
 
 [[package]]
-name = "cpuio"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d531514efb06912141fa65967447de805691b685a7565c87d1765afe34a98aa7"
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -40,11 +34,20 @@ name = "operating-system"
 version = "0.1.0"
 dependencies = [
  "bootloader",
- "cpuio",
  "lazy_static",
+ "pic8259",
  "spin",
  "uart_16550",
  "volatile 0.2.7",
+ "x86_64",
+]
+
+[[package]]
+name = "pic8259"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08cc920d83ee33c0f9b73aa441e75468bf2d10c959a3eb6260cf720b05ac91a1"
+dependencies = [
  "x86_64",
 ]
 

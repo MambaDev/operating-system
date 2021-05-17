@@ -21,12 +21,11 @@ pub extern "C" fn _start() -> ! {
 
     // as before
     #[cfg(test)]
-        test_main();
+    test_main();
 
     println!("It did not crash!");
     loop {}
 }
-
 
 /// This function is called on panic.
 #[cfg(not(test))]

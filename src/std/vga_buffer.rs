@@ -1,6 +1,6 @@
-use volatile::Volatile;
 use core::fmt;
 use spin::Mutex;
+use volatile::Volatile;
 
 /// The assigned u8 representation of the vga color assignment, this is the color that would be
 /// assigned to the given text being written to the display.
@@ -86,7 +86,8 @@ impl Writer {
     pub fn write_string(&mut self, input_string: &str) {
         for byte in input_string.bytes() {
             match byte {
-                0x20..=0x7e | b'\n' => self.write_byte(byte),
+                0x20..=0x7e => self.write_byte(byte),
+                b'\n' => self.new_line(),
                 _ => self.write_byte(0xfe),
             }
         }
@@ -156,7 +157,10 @@ impl Writer {
     /// writer.write_string("Hello, World\n");
     /// ```
     fn clear_row(&mut self, row: usize) {
-        let blank = ScreenCharacter { ascii_character: b' ', color_code: self.color_code };
+        let blank = ScreenCharacter {
+            ascii_character: b' ',
+            color_code: self.color_code,
+        };
 
         for col in 0..TEXT_BUFFER_WIDTH {
             self.buffer.chars[row][col].write(blank);
@@ -197,7 +201,20 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: core::fmt::Arguments) {
     use core::fmt::Write;
-    super::vga_buffer::WRITER.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+
+    // only  lock the vga writer a time when  no interrupts
+    // are occurring. This is use to stop the  chance of the
+    // spin  lock causing  a dead lock between the interrupt
+    // and the kernal.
+    //
+    // The without_interrupts function takes a closure and
+    // executes it in an interrupt-free environment. We use
+    // it to ensure that no interrupt can occur as long as
+    // the Mutex is locked.
+    interrupts::without_interrupts(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    })
 }
 
 // By introducing the writer as a global static, it begins to ensure that more problems occur. By
@@ -217,9 +234,9 @@ lazy_static::lazy_static! {
 #[cfg(test)]
 #[macro_use]
 mod test {
+    use crate::println;
     #[cfg(test)]
     use crate::std::vga_buffer::*;
-    use crate::println;
 
     #[test_case]
     fn test_println_single_line() {
@@ -236,39 +253,55 @@ mod test {
     #[test_case]
     fn test_println_many_long() {
         for _ in 0..200 {
-            println!("test_println_many_long output test_println_many_long output \
+            println!(
+                "test_println_many_long output test_println_many_long output \
             test_println_many_long output test_println_many_long output test_println_many_long \
-            output test_println_many_long output");
-        }
-    }
-
-    #[test_case]
-    fn test_println_long_should_overflow() {
-        let input = " Some test string that fits on a single  Some test string that fits on a single ";
-
-        print!("{}", input);
-        print!("{}", input);
-        print!("{}", input);
-        println!();
-
-        for i in 1..4 {
-            for (k, c) in input.chars().enumerate() {
-                // minus i for the given row position and then an additional minus 1 for the new
-                // line that would again shift all components up one row.
-                let screen_char = WRITER.lock().buffer.chars[TEXT_BUFFER_HEIGHT - i - 1][k].read();
-                assert_eq!(char::from(screen_char.ascii_character), c);
-            }
+            output test_println_many_long output"
+            );
         }
     }
 
     #[test_case]
     fn test_println_single_line_output() {
-        let input = "Some test string that fits on a single line";
-        println!("{}", input);
+        use core::fmt::Write;
+        use x86_64::instructions::interrupts;
 
-        for (i, c) in input.chars().enumerate() {
-            let screen_char = WRITER.lock().buffer.chars[TEXT_BUFFER_HEIGHT - 2][i].read();
-            assert_eq!(char::from(screen_char.ascii_character), c);
-        }
+        let s = "some test string that fits on a single line";
+        interrupts::without_interrupts(|| {
+            let mut writer = WRITER.lock();
+            writeln!(writer, "\n{}", s).expect("writeln failed");
+            for (i, c) in s.chars().enumerate() {
+                let screen_char = writer.buffer.chars[TEXT_BUFFER_HEIGHT - 2][i].read();
+                assert_eq!(char::from(screen_char.ascii_character), c);
+            }
+        });
+    }
+
+    #[test_case]
+    fn test_println_long_should_overflow() {
+        use core::fmt::Write;
+        use x86_64::instructions::interrupts;
+
+        let input =
+            " Some test string that fits on a single  Some test string that fits on a single ";
+
+        interrupts::without_interrupts(|| {
+            let mut writer = WRITER.lock();
+
+            writeln!(writer, "\n{}", input).expect("writeln failed");
+            writeln!(writer, "{}", input).expect("writeln failed");
+            writeln!(writer, "{}", input).expect("writeln failed");
+            writeln!(writer, "").expect("writeln failed");
+
+            for i in 1..4 {
+                for (k, c) in input.chars().enumerate() {
+                    // minus i for the given row position and then an additional minus 1 for the new
+                    // line that would again shift all components up one row.
+                    let screen_char = writer.buffer.chars[TEXT_BUFFER_HEIGHT - i - 2][k].read();
+                    assert_eq!(char::from(screen_char.ascii_character), c);
+                }
+            }
+        })
     }
 }
+

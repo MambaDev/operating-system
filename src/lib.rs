@@ -1,15 +1,14 @@
 #![no_std]
-
 #![feature(abi_x86_interrupt)]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
+#![feature(const_fn_trait_bound)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
 
 pub mod std;
-
 
 /// Entry point for `cargo xtest`
 // noinspection RsUnresolvedReference
@@ -24,6 +23,21 @@ pub extern "C" fn _start() -> ! {
 pub fn init() {
     std::gdt::init();
     std::interrupts::init_idt();
+
+    // init the PIC controllers. These are unsafe since it could
+    // cause unexpected output if the given PIC controllers are
+    // misconfigured.
+    unsafe { std::interrupts::PICS.lock().initialize() };
+
+    // Enable interrupts to be processed by the CPU. Meaning that
+    // now the CPU does listen ot the interrupt controller. Executing
+    // a special "sti" instruction "set interrupt" to enable external
+    // interrupts.
+    //
+    // At this point we must configure the basic hardware timer
+    // (intel 8253) since its enabled by default otherwise we will
+    // start getting double faults.
+    x86_64::instructions::interrupts::enable()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,14 +62,16 @@ pub trait Testable {
     fn run(&self) -> ();
 }
 
-impl<T> Testable for T where T: Fn(), {
+impl<T> Testable for T
+where
+    T: Fn(),
+{
     fn run(&self) {
         serial_print!("{}...", core::any::type_name::<T>());
         self();
         serial_println!("[ok]");
     }
 }
-
 
 pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());

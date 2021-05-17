@@ -1,7 +1,7 @@
-use uart_16550::SerialPort;
-use spin::Mutex;
-use lazy_static::lazy_static;
 use core::fmt::Arguments;
+use lazy_static::lazy_static;
+use spin::Mutex;
+use uart_16550::SerialPort;
 
 // Globally accessible implementation of the first serial port of the virtual machine. This will
 // be used during testing to ensure that the tests can run headless and process the output to the
@@ -34,5 +34,16 @@ macro_rules! serial_println {
 #[doc(hidden)]
 pub fn _print(args: Arguments) {
     use core::fmt::Write;
-    SERIAL1.lock().write_fmt(args).expect("Printing to serial failed");
+    use x86_64::instructions::interrupts;
+
+    // The without_interrupts function takes a closure and
+    // executes it in an interrupt-free environment. We use
+    // it to ensure that no interrupt can occur as long as
+    // the Mutex is locked.
+    interrupts::without_interrupts(|| {
+        SERIAL1
+            .lock()
+            .write_fmt(args)
+            .expect("Printing to serial failed");
+    })
 }
