@@ -12,6 +12,7 @@ use crate::println;
 // to be called for external interrupts.
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
+#[allow(dead_code)]
 pub enum InterruptIndex {
     // The offset in which the timer interrupt is triggered.
     Timer = PIC_1_OFFSET,
@@ -64,6 +65,9 @@ lazy_static! {
         // configure the timer interrupt.
         idt[InterruptIndex::Timer.as_usize()]
             .set_handler_fn(timer_interrupt_handler);
+
+        idt[InterruptIndex::Keyboard.as_usize()]
+        .set_handler_fn(ps2_keyboard_interrupt_handler);
 
         idt
     };
@@ -138,8 +142,8 @@ fn test_breakpoint_exception() {
     // then we have passed since it should not fault.
     x86_64::instructions::interrupts::int3();
 }
+
 /// Handler for processing timer interrupts.
-///
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
     print!(".");
 
@@ -149,5 +153,30 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8())
+    }
+}
+
+// Handler for processing interrupts triggered via a PS2 keyboard input.
+extern "x86-interrupt" fn ps2_keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    use x86_64::instructions::port::Port;
+
+    // we need to read from the PS2 controller which is on the I/O port of x60.
+    // https://wiki.osdev.org/I/O_Ports#The_list
+    //
+    // reading the scan code allows the PIC controllers to accept the interrupt
+    // notification to end correctly, and thus allowing another key press.
+    //
+    // PS2 Only, USB keyboards don't use interrupts to generate a input.
+    let mut port = Port::new(0x60);
+    let scan_code: u8 = unsafe { port.read() };
+
+    print!("{}", scan_code);
+
+    // Let the PICS know that the interrupt has been handled via
+    // EOI (end of interrupt). If not done, the PIC will assume
+    // we are still busy and wait before sending the next one.
+    unsafe {
+        PICS.lock()
+            .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8())
     }
 }

@@ -21,10 +21,10 @@ pub extern "C" fn _start() -> ! {
 
     // as before
     #[cfg(test)]
-    test_main();
+        test_main();
 
     println!("It did not crash!");
-    loop {}
+    operating_system::htl_loop();
 }
 
 /// This function is called on panic.
@@ -32,7 +32,7 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    operating_system::htl_loop();
 }
 
 #[cfg(test)]
