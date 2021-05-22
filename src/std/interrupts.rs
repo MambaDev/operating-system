@@ -2,10 +2,19 @@ use crate::std::gdt;
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
-use crate::print;
-use crate::println;
+use crate::{print, println};
+
+/// Halt loop that will allow the CPU to go into idle and only continue
+/// executing once the next interrupt arrives.
+///
+/// https://en.wikipedia.org/wiki/HLT_(x86_instruction)
+pub fn htl_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt()
+    }
+}
 
 // The index values in which will be used in the interrupt
 // descriptor table to allow the CPU to know which handler
@@ -51,7 +60,9 @@ pub static PICS: spin::Mutex<ChainedPics> =
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
+
         idt.breakpoint.set_handler_fn(breakpoint_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
 
         // configure the double fault handler with the
         // alternative stack to ensure double faults
@@ -68,6 +79,7 @@ lazy_static! {
 
         idt[InterruptIndex::Keyboard.as_usize()]
         .set_handler_fn(ps2_keyboard_interrupt_handler);
+
 
         idt
     };
@@ -136,13 +148,6 @@ extern "x86-interrupt" fn double_fault_handler(
     panic!("EXCEPTION: DOUBLE FAULT\n{:#?}", stack_frame)
 }
 
-#[test_case]
-fn test_breakpoint_exception() {
-    // invoke th break point execution, if it executes and does not fail
-    // then we have passed since it should not fault.
-    x86_64::instructions::interrupts::int3();
-}
-
 /// Handler for processing timer interrupts.
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
     print!(".");
@@ -199,4 +204,24 @@ extern "x86-interrupt" fn ps2_keyboard_interrupt_handler(_stack_frame: Interrupt
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8())
     }
+}
+
+extern "x86-interrupt" fn page_fault_handler(stack_frame: InterruptStackFrame, error_code: PageFaultErrorCode) {
+    use x86_64::registers::control::Cr2;
+
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("Error Code: {:?}", error_code);
+    println!("Stack Frame: {:?}", stack_frame);
+
+    htl_loop();
+}
+
+// Tests
+
+#[test_case]
+fn test_breakpoint_exception() {
+    // invoke th break point execution, if it executes and does not fail
+    // then we have passed since it should not fault.
+    x86_64::instructions::interrupts::int3();
 }

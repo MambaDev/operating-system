@@ -17,17 +17,7 @@ pub mod std;
 pub extern "C" fn _start() -> ! {
     init();
     test_main();
-    htl_loop();
-}
-
-/// Halt loop that will allow the CPU to go into idle and only continue
-/// executing once the next interrupt arrives.
-///
-/// https://en.wikipedia.org/wiki/HLT_(x86_instruction)
-pub fn htl_loop() -> ! {
-    loop {
-        x86_64::instructions::hlt()
-    }
+    std::interrupts::htl_loop();
 }
 
 pub fn init() {
@@ -95,7 +85,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    htl_loop()
+    std::interrupts::htl_loop();
 }
 
 // During the testing, we will be exporting all our testing output to the serial port for the
