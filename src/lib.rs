@@ -10,6 +10,8 @@ use core::panic::PanicInfo;
 
 pub mod std;
 
+// TODO: update to custom kernel main.
+
 /// Entry point for `cargo xtest`
 // noinspection RsUnresolvedReference
 #[cfg(test)]
