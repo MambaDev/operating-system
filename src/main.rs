@@ -8,16 +8,16 @@
 
 mod std;
 
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use bootloader::{BootInfo, entry_point};
 
-/// Defines the entry point function.
-///
-/// The function must have the signature `fn(&'static BootInfo) -> !`.
-///
-/// This macro just creates a function named `_start`, which the linker will use as the entry
-/// point. The advantage of using this macro instead of providing an own `_start` function is
-/// that the macro ensures that the function and argument types are correct.
+// Defines the entry point function.
+//
+// The function must have the signature `fn(&'static BootInfo) -> !`.
+//
+// This macro just creates a function named `_start`, which the linker will use as the entry
+// point. The advantage of using this macro instead of providing an own `_start` function is
+// that the macro ensures that the function and argument types are correct.
 entry_point!(kernel_main);
 
 /// This follows the implementation and guide of building a operating system in rust
