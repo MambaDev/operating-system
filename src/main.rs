@@ -10,6 +10,7 @@ mod std;
 
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
+use x86_64::VirtAddr;
 
 // Defines the entry point function.
 //
@@ -28,9 +29,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     operating_system::init();
 
+    use std::memory::BootInfoFrameAllocator;
+
+    let mut frame_allocator = unsafe {
+        BootInfoFrameAllocator::init(&boot_info.memory_map)
+    };
+
     // as before
     #[cfg(test)]
-    test_main();
+        test_main();
 
     println!("It did not crash!");
     std::interrupts::htl_loop();
